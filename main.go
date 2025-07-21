@@ -4,6 +4,7 @@ package main
 // https://go.dev/ref/spec
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -97,7 +98,34 @@ func main() {
 		n = UseOP(func(n1 int, n2 int) int { return n1 % n2 }, 12, 8)
 		fmt.Println("n=", n)
 	case "json":
-		fmt.Println(GetColors("json"))
+		marshalled, err := GetColors("json")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		fmt.Println(marshalled)
+		path, err := os.Getwd()
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		err = os.WriteFile(path+"/colors.json", []byte(marshalled), 0777)
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+
+		bytes, err := os.ReadFile(path + "/colors.json")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		colors := []Color{}
+		json.Unmarshal(bytes, &colors)
+		for _, c := range colors {
+			fmt.Println(c.Name)
+		}
+
 	case "xml":
 		fmt.Println(GetColors("xml"))
 	case "csv":
