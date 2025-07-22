@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+    font-family: 'Lucida Sans', Geneva, Verdana, sans-serif;
+    color: light-dark(#333, #FFF);
+    background-color: light-dark(#FFF, #333);
+}
+
+form div {
+    padding-bottom:10px;
+}
+
+input[type=text], input[type=password], input[type=submit] {
+    padding: 6px;
+    font-size: 16px;
+}
+
+.hidden {
+    display:none;
+}
+
+.submit-block a {
+    margin-left: 30px;
+}
