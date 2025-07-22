@@ -4,6 +4,48 @@
         <title>Index</title>
         <link rel="stylesheet" type="text/css" href="/main.css">
         <script>
+            window.addEventListener('load', () => {
+                const forms = document.querySelectorAll('form')
+                forms.forEach((form) => {
+                    form.addEventListener('submit',handleSubmit)
+                });
+            })
+
+            function handleSubmit(e) {
+                const $form = document.getElementById(e.target.id);
+                const data = new URLSearchParams(new FormData(e.target)); 
+
+                e.preventDefault();
+                getErrorBlock(e.target).innerHTML = ''
+
+                fetch(e.target.action,{method:'post',body: data})
+                    .then(response => response.json())
+                    .then(json => handleResponse(e.target, json))
+                    .catch(error => console.error(error))
+
+            }
+
+            function getErrorBlock(form) {
+                var b = Array.from(form.children).filter(e => 
+                    (e.classList.contains('error-block')))
+                return b[0];
+            }
+
+            function handleResponse(form, json) {
+                if (json.Errors != null) {
+                    const e = getErrorBlock(form)
+                    const ul = document.createElement('ul');
+                    for (const err of json.Errors) {
+                        const li = document.createElement('li');
+                        li.innerText = err
+                        ul.append(li)
+                    }
+                    e.append(ul);
+                }
+            }
+
+
+
             /*
             fetch('/api').then(response => response.json())
                 .then(json => console.log(json))
@@ -38,6 +80,8 @@
                     <input type="submit" value="Log In" />
                     <a href="javascript:toggle('login-block','join-block')">Create Account</a>
                 </div>
+                <div class="error-block">
+                </div>
             </form>
         </div>
         <div id="join-block" class="hidden">
@@ -62,6 +106,8 @@
                 <div class="submit-block">
                     <input type="submit" value="Create Account" />
                     <a href="javascript:toggle('login-block','join-block')">Log In</a>
+                </div>
+                <div class="error-block">
                 </div>
             </form>
         </div>

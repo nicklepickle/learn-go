@@ -16,15 +16,6 @@ const bcryptCost int = 8
 const minPassLen int = 8
 const port int = 8080
 
-/*
-// test
-
-	func apiHandler(res http.ResponseWriter, req *http.Request) {
-		json := fmt.Sprintf(`{"method":"%s","path":"%s"}`, req.Method, req.URL)
-		fmt.Println(json)
-		res.Write([]byte(json))
-	}
-*/
 type JsonResponse struct {
 	Status int
 	Data   any
@@ -44,7 +35,6 @@ func writeResponse(res http.ResponseWriter, data any, status int, errors []strin
 	}
 	res.WriteHeader(status)
 	res.Header().Add("Content-Type", "application/json")
-
 	res.Write(bytes)
 }
 
@@ -56,22 +46,18 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 	if exists && user.Status == 1 {
 		//fmt.Printf("USERS user=%s password=%s\n", user.UserName, user.Hash)
 		err := bcrypt.CompareHashAndPassword([]byte(user.Hash), []byte(pw))
-
 		if err == nil {
 			user.Seen = time.Now()
 			err = user.save()
 			if err != nil {
 				log.Println(err.Error())
 			}
-			//http.Redirect(res, req, "/?ok=true", http.StatusSeeOther)
 
 			writeResponse(res, user, 200, nil)
 			return
-		} else {
-			log.Println(err.Error())
 		}
 	}
-	//http.Redirect(res, req, "/?ok=false", http.StatusSeeOther)
+
 	errors := []string{"Log in failed"}
 	writeResponse(res, nil, 401, errors)
 }
@@ -104,7 +90,7 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	_, err := mail.ParseAddress(email)
 	if err != nil {
-		errors = append(errors, fmt.Sprintf("Email addess %s is invalid %s", email, err.Error()))
+		errors = append(errors, fmt.Sprintf("Email addess %s is invalid", email))
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(pw1), bcryptCost)
@@ -113,10 +99,7 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(errors) > 0 {
-		for _, e := range errors {
-			fmt.Println(e)
-		}
-		http.Redirect(res, req, "/?ok=false", http.StatusSeeOther)
+		writeResponse(res, nil, 400, errors)
 		return
 	}
 
@@ -136,12 +119,13 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println(err.Error())
 		// something else went wrong
-		http.Redirect(res, req, "/?ok=false", http.StatusSeeOther)
+		errors = append(errors, err.Error())
+		writeResponse(res, nil, 400, errors)
 		return
 	}
 
 	// happy path
-	http.Redirect(res, req, "/?ok=true", http.StatusSeeOther)
+	writeResponse(res, user, 200, nil)
 }
 
 func main() {
@@ -149,7 +133,6 @@ func main() {
 
 	fs := http.FileServer(http.Dir("./public"))
 	http.Handle("/", fs)
-	//http.HandleFunc("/api", apiHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/join", joinHandler)
 
