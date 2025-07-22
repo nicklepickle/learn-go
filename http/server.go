@@ -22,20 +22,15 @@ type JsonResponse struct {
 	Errors []string
 }
 
-func writeResponse(res http.ResponseWriter, data any, status int, errors []string) {
-	response := JsonResponse{
-		Status: status,
-		Data:   data,
-		Errors: errors,
-	}
-	bytes, err := json.Marshal(response)
+func (r *JsonResponse) write(w http.ResponseWriter) error {
+	bytes, err := json.Marshal(r)
 	if err != nil {
-		log.Println(err.Error())
-		return
+		return err
 	}
-	res.WriteHeader(status)
-	res.Header().Add("Content-Type", "application/json")
-	res.Write(bytes)
+	w.WriteHeader(r.Status)
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(bytes)
+	return nil
 }
 
 func loginHandler(res http.ResponseWriter, req *http.Request) {
@@ -52,14 +47,21 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Println(err.Error())
 			}
-
-			writeResponse(res, user, 200, nil)
+			response := JsonResponse{
+				Data:   user,
+				Status: 200,
+			}
+			response.write(res)
 			return
 		}
 	}
 
 	errors := []string{"Log in failed"}
-	writeResponse(res, nil, 401, errors)
+	response := JsonResponse{
+		Errors: errors,
+		Status: 401,
+	}
+	response.write(res)
 }
 
 func joinHandler(res http.ResponseWriter, req *http.Request) {
@@ -99,7 +101,11 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(errors) > 0 {
-		writeResponse(res, nil, 400, errors)
+		response := JsonResponse{
+			Errors: errors,
+			Status: 401,
+		}
+		response.write(res)
 		return
 	}
 
@@ -120,12 +126,20 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 		log.Println(err.Error())
 		// something else went wrong
 		errors = append(errors, err.Error())
-		writeResponse(res, nil, 400, errors)
+		response := JsonResponse{
+			Errors: errors,
+			Status: 401,
+		}
+		response.write(res)
 		return
 	}
 
 	// happy path
-	writeResponse(res, user, 200, nil)
+	response := JsonResponse{
+		Data:   user,
+		Status: 200,
+	}
+	response.write(res)
 }
 
 func main() {

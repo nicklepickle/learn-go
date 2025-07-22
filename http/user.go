@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 )
@@ -36,7 +35,7 @@ func ReadUsers() error {
 	}
 
 	err = json.Unmarshal(bytes, &Users)
-	fmt.Println("ReadUsers: " + path + "/users.json = " + string(bytes))
+	//fmt.Println("ReadUsers: " + path + "/users.json = " + string(bytes))
 	if err != nil {
 		return err
 	}
@@ -45,7 +44,6 @@ func ReadUsers() error {
 
 func WriteUsers() error {
 	path, err := os.Getwd()
-	fmt.Println(path)
 	if err != nil {
 		return err
 	}

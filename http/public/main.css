@@ -28,6 +28,7 @@ input[type=text], input[type=password], input[type=submit] {
 .error-block ul {
     list-style-type: none;
     color:#900;
+    color: light-dark(#900, #E44);
     margin: 0;
     padding: 0;
 
