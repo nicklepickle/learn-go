@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,29 @@ const port int = 8080
 		res.Write([]byte(json))
 	}
 */
+type JsonResponse struct {
+	Status int
+	Data   any
+	Errors []string
+}
+
+func writeResponse(res http.ResponseWriter, data any, status int, errors []string) {
+	response := JsonResponse{
+		Status: status,
+		Data:   data,
+		Errors: errors,
+	}
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+	res.WriteHeader(status)
+	res.Header().Add("Content-Type", "application/json")
+
+	res.Write(bytes)
+}
+
 func loginHandler(res http.ResponseWriter, req *http.Request) {
 	username := req.PostFormValue("user")
 	pw := req.PostFormValue("password")
@@ -39,13 +63,17 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Println(err.Error())
 			}
-			http.Redirect(res, req, "/?ok=true", http.StatusSeeOther)
+			//http.Redirect(res, req, "/?ok=true", http.StatusSeeOther)
+
+			writeResponse(res, user, 200, nil)
 			return
 		} else {
 			log.Println(err.Error())
 		}
 	}
-	http.Redirect(res, req, "/?ok=false", http.StatusSeeOther)
+	//http.Redirect(res, req, "/?ok=false", http.StatusSeeOther)
+	errors := []string{"Log in failed"}
+	writeResponse(res, nil, 401, errors)
 }
 
 func joinHandler(res http.ResponseWriter, req *http.Request) {
