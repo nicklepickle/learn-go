@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const port int = 8080
+const key string = "hB2sPfLoqJKIRGE_WF8OERaZBchR1S1urvKCWUEMGQ7"
 
 type JsonResponse struct {
 	Status int
@@ -36,8 +39,24 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 		}
 		response.write(res)
 	} else {
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"id":   user.UserId,
+			"user": user.UserName,
+		})
+
+		signedToken, err := token.SignedString([]byte(key))
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		cookie := http.Cookie{
+			Name:  "_jwt",
+			Value: signedToken,
+		}
+		http.SetCookie(res, &cookie)
+
 		response := JsonResponse{
-			Data:   user,
+			Data:   signedToken,
 			Status: 200,
 		}
 		response.write(res)
@@ -60,6 +79,10 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 		}
 		response.write(res)
 	}
+}
+
+func contentHandler(res http.ResponseWriter, req *http.Request) {
+
 }
 
 func main() {
