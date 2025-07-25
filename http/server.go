@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -82,6 +83,26 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func contentHandler(res http.ResponseWriter, req *http.Request) {
+	auth := req.Header.Get("Authorization")
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(key), nil
+	})
+	if err != nil {
+		log.Println(err.Error())
+	} else {
+		log.Println("token", token)
+		//for c := range claims {
+		//	fmt.Printf("c: %v\n", c)
+		//}
+		fmt.Println("user", claims["user"])
+
+		response := JsonResponse{
+			Data:   claims,
+			Status: 200,
+		}
+		response.write(res)
+	}
 
 }
 
@@ -90,6 +111,7 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/join", joinHandler)
+	http.HandleFunc("/content", contentHandler)
 
 	fmt.Printf("listening on http://localhost:%d/\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))

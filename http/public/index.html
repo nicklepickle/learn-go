@@ -3,15 +3,28 @@
     <head>
         <title>Index</title>
         <link rel="stylesheet" type="text/css" href="/main.css">
+        <script src="cookie.js"></script>
         <script>
             window.addEventListener('load', () => {
-                const forms = document.querySelectorAll('form')
-                forms.forEach((form) => {
-                    form.addEventListener('submit',handleSubmit)
-                });
+                document.getElementById('login-form').addEventListener('submit',handleAuth)
+                document.getElementById('join-form').addEventListener('submit',handleAuth)
             })
 
-            function handleSubmit(e) {
+            function loadContent() {
+                let jwt = Cookie.getCookie('_jwt');
+                console.log(jwt)
+                fetch('/content',{
+                    method: "GET",
+                    headers: {
+                        'Authorization': 'Bearer ' + jwt 
+                    }
+                })
+                .then(response => response.json())
+                .then(json => handleContentResponse(json))
+                .catch(error => console.error(error))
+            }
+
+            function handleAuth(e) {
                 const $form = document.getElementById(e.target.id);
                 const data = new URLSearchParams(new FormData(e.target)); 
 
@@ -20,7 +33,7 @@
 
                 fetch(e.target.action,{method:'post',body: data})
                     .then(response => response.json())
-                    .then(json => handleResponse(e.target, json))
+                    .then(json => handleAuthResponse(e.target, json))
                     .catch(error => console.error(error))
 
             }
@@ -31,7 +44,7 @@
                 return b[0];
             }
 
-            function handleResponse(form, json) {
+            function handleAuthResponse(form, json) {
                 if (json.Errors != null) {
                     const e = getErrorBlock(form)
                     const ul = document.createElement('ul');
@@ -42,6 +55,19 @@
                     }
                     e.append(ul);
                 }
+                else {
+                    console.log('load content')
+                    loadContent()
+                }
+            }
+
+            function handleContentResponse(json) {
+                console.log(json);
+                $content = document.getElementById('content-block')
+                document.getElementById('login-block').classList.add('hidden');
+                document.getElementById('join-block').classList.add('hidden');
+                $content.classList.remove('hidden');
+                $content.innerHTML = json.Data.user;
             }
 
             function toggle() {
@@ -60,7 +86,7 @@
     <body>
         <div id="login-block">
             <h2>Log in</h2>
-            <form method="post" action="/login">
+            <form method="post" action="/login" id="login-form">
                 <div>
                     <label for="user">User</label><br />
                     <input type="text" name="user" />
@@ -79,7 +105,7 @@
         </div>
         <div id="join-block" class="hidden">
             <h2>Create Account</h2>
-            <form method="post" action="/join">
+            <form method="post" action="/join" id="join-form"></form>>
                 <div>
                     <label for="user">User Name</label><br />
                     <input type="text" name="user" id="user`"/>
@@ -103,6 +129,9 @@
                 <div class="error-block">
                 </div>
             </form>
+        </div>
+        <div id="content-block" class="hidden">
+            
         </div>
     </body>
 </html>
