@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -82,26 +84,116 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func postHandler(res http.ResponseWriter, req *http.Request) {
+	auth := req.Header.Get("Authorization")
+	claims := jwt.MapClaims{}
+	_, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(key), nil
+	})
+	if err != nil {
+		log.Println(err.Error())
+	} else {
+		//log.Println("token", token)
+		fmt.Println("user", claims["user"])
+		s := claims["id"].(string)
+		userId, err := strconv.Atoi(s)
+		if err != nil {
+			response := JsonResponse{
+				Errors: []string{"User id is invalid: " + err.Error()},
+				Status: 500,
+			}
+			response.write(res)
+			return
+		}
+		id := req.PostFormValue("id")
+		title := req.PostFormValue("title")
+		body := req.PostFormValue("body")
+		//status := req.PostFormValue("status")
+
+		content := &Content{}
+
+		if id == "0" || id == "" {
+			content = &Content{
+				ContentId: 0,
+				UserId:    userId,
+				UserName:  claims["user"].(string),
+				Title:     title,
+				Body:      body,
+				Created:   time.Now(),
+				Updated:   time.Now(),
+				Status:    1,
+			}
+
+		} else {
+			userContent := GetContent(userId)
+			contentId, err := strconv.Atoi(id)
+			if err != nil {
+				response := JsonResponse{
+					Errors: []string{err.Error()},
+					Status: 500,
+				}
+				response.write(res)
+			} else {
+				for _, c := range userContent {
+					if c.ContentId == contentId {
+						// does the content belong to this user?
+						if c.UserId != userId {
+							response := JsonResponse{
+								Errors: []string{err.Error()},
+								Status: 500,
+							}
+							response.write(res)
+							return
+						} else {
+							content = &c
+							content.Title = title
+							content.Body = body
+							content.Updated = time.Now()
+						}
+					}
+				}
+			}
+		}
+
+		content, err = PostContent(content)
+		response := JsonResponse{
+			Data:   content,
+			Status: 200,
+		}
+		response.write(res)
+
+	}
+
+}
+
 func contentHandler(res http.ResponseWriter, req *http.Request) {
 	auth := req.Header.Get("Authorization")
 	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
 		return []byte(key), nil
 	})
 	if err != nil {
 		log.Println(err.Error())
 	} else {
 		log.Println("token", token)
-		//for c := range claims {
-		//	fmt.Printf("c: %v\n", c)
-		//}
-		fmt.Println("user", claims["user"])
 
-		response := JsonResponse{
-			Data:   claims,
-			Status: 200,
+		userId := int(claims["id"].(float64)) //not sure why it's float64
+		log.Println("user id = ", userId)
+
+		if err != nil {
+			response := JsonResponse{
+				Errors: []string{"User id is invalid: " + err.Error()},
+				Status: 500,
+			}
+			response.write(res)
+		} else {
+			userContent := GetContent(userId)
+			response := JsonResponse{
+				Data:   userContent,
+				Status: 200,
+			}
+			response.write(res)
 		}
-		response.write(res)
 	}
 
 }
@@ -112,6 +204,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/join", joinHandler)
 	http.HandleFunc("/content", contentHandler)
+	http.HandleFunc("/post", postHandler)
 
 	fmt.Printf("listening on http://localhost:%d/\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
