@@ -17,6 +17,19 @@ input[type=text], input[type=password], input[type=submit] {
     font-size: 16px;
 }
 
+i {
+    font-size:14px;
+}
+
+.post {
+    padding-bottom: 24px;
+    border-bottom: 1px solid #777;
+}
+
+#cancel {
+        margin-left: 250px;
+}
+
 .hidden {
     display:none;
 }
@@ -37,4 +50,18 @@ input[type=text], input[type=password], input[type=submit] {
 .error-block ul li {
     margin: 0;
     padding: 0;
+}
+
+#title {
+    width: 400px;
+}
+
+textarea {
+    width: 405px;
+    height: 405px;
+    font-size: 16px;
+}
+
+#log-out {
+    float:right; 
 }

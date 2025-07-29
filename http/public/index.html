@@ -6,9 +6,64 @@
         <script src="cookie.js"></script>
         <script>
             window.addEventListener('load', () => {
-                document.getElementById('login-form').addEventListener('submit',handleAuth)
-                document.getElementById('join-form').addEventListener('submit',handleAuth)
+                document.getElementById('login-form').addEventListener('submit',handleAuth);
+                document.getElementById('join-form').addEventListener('submit',handleAuth);
+                document.getElementById('post-form').addEventListener('submit',postContent);
+
+                let jwt = Cookie.getCookie('_jwt');
+                if (jwt) {
+                    loadContent();
+                }
+                else {
+                    show('login-block');
+                }
             })
+
+            function show(id) {
+                const blocks = document.querySelectorAll('.block');
+                blocks.forEach((block) =>
+                    block.classList.add('hidden')
+                )
+                document.getElementById(id).classList.remove('hidden')
+            }
+
+            function getErrorBlock(form) {
+                var b = Array.from(form.children).filter(e => 
+                    (e.classList.contains('error-block')))
+                return b[0];
+            }
+
+            function handleAuth(e) {
+                //const $form = document.getElementById(e.target.id);
+                const data = new URLSearchParams(new FormData(e.target)); 
+
+                e.preventDefault();
+                getErrorBlock(e.target).innerHTML = ''
+
+                fetch(e.target.action,{method:'post',body: data})
+                    .then(response => response.json())
+                    .then(json => handleAuthResponse(e.target, json))
+                    .catch(error => console.error(error));
+
+            }
+
+
+            function handleAuthResponse(form, json) {
+                if (json.Errors != null) {
+                    const e = getErrorBlock(form)
+                    const ul = document.createElement('ul');
+                    for (const err of json.Errors) {
+                        const li = document.createElement('li');
+                        li.innerText = err;
+                        ul.append(li);
+                    }
+                    e.append(ul);
+                }
+                else {
+                    console.log('load content');
+                    loadContent();
+                }
+            }
 
             function loadContent() {
                 let jwt = Cookie.getCookie('_jwt');
@@ -21,70 +76,53 @@
                 })
                 .then(response => response.json())
                 .then(json => handleContentResponse(json))
-                .catch(error => console.error(error))
+                .catch(error => {console.error(error); show('login-block');});
             }
-
-            function handleAuth(e) {
-                const $form = document.getElementById(e.target.id);
-                const data = new URLSearchParams(new FormData(e.target)); 
-
-                e.preventDefault();
-                getErrorBlock(e.target).innerHTML = ''
-
-                fetch(e.target.action,{method:'post',body: data})
-                    .then(response => response.json())
-                    .then(json => handleAuthResponse(e.target, json))
-                    .catch(error => console.error(error))
-
-            }
-
-            function getErrorBlock(form) {
-                var b = Array.from(form.children).filter(e => 
-                    (e.classList.contains('error-block')))
-                return b[0];
-            }
-
-            function handleAuthResponse(form, json) {
-                if (json.Errors != null) {
-                    const e = getErrorBlock(form)
-                    const ul = document.createElement('ul');
-                    for (const err of json.Errors) {
-                        const li = document.createElement('li');
-                        li.innerText = err
-                        ul.append(li)
-                    }
-                    e.append(ul);
-                }
-                else {
-                    console.log('load content')
-                    loadContent()
-                }
-            }
-
+            
             function handleContentResponse(json) {
-                //console.log(json);
-                $content = document.getElementById('content-block')
-                document.getElementById('login-block').classList.add('hidden');
-                document.getElementById('join-block').classList.add('hidden');
-                $content.classList.remove('hidden');
-                $content.innerHTML = json.Data.user;
+                console.log('handleContentResponse',json);
+                
+                $content = document.getElementById('content-block');
+                $content.innerHTML = `<a href="javascript:show('post-block')">New Post</a>`;
+                for (const c of json.Data) {
+                    $content.innerHTML += 
+                    `<div class="post">
+                        <h2>${c.Title}</h2>
+                        <div>${c.Body}</div>
+                        <div><i>${c.UserName} ${new Date(c.Created).toDateString()}</i></div>
+                    </div>`; 
+                }
+            
+                show('content-block');
             }
 
-            function toggle() {
-                for (const a of arguments) {
-                    const e = document.getElementById(a);
-                    if (e.classList.contains('hidden')) {
-                        e.classList.remove('hidden')
+            function postContent(e) {
+                //const $form = document.getElementById(e.target.id);
+                const data = new URLSearchParams(new FormData(e.target)); 
+                e.preventDefault();
+                let jwt = Cookie.getCookie('_jwt');
+                //console.log(jwt)
+                fetch('/post',{
+                    method: "post",
+                    body: data,
+                    headers: {
+                        'Authorization': 'Bearer ' + jwt 
                     }
-                    else {
-                        e.classList.add('hidden')
-                    }
-                }
+                })
+                .then(response => response.json())
+                .then(json => handleContentResponse(json))
+                .catch(error => console.error(error));
+            }
+
+            function logout() {
+                document.cookie = '_jwt=;expires=Thu, 01 Jan 1970 00:00:01 GMT';
+                location = '/';
             }
         </script>
     </head>
     <body>
-        <div id="login-block">
+        <a href="javascript:logout()" id="log-out">Log Out</a>
+        <div id="login-block" class="hidden block">
             <h2>Log in</h2>
             <form method="post" action="/login" id="login-form">
                 <div>
@@ -97,15 +135,15 @@
                 </div>
                 <div class="submit-block">
                     <input type="submit" value="Log In" />
-                    <a href="javascript:toggle('login-block','join-block')">Create Account</a>
+                    <a href="javascript:show('join-block')">Create Account</a>
                 </div>
                 <div class="error-block">
                 </div>
             </form>
         </div>
-        <div id="join-block" class="hidden">
+        <div id="join-block" class="hidden block">
             <h2>Create Account</h2>
-            <form method="post" action="/join" id="join-form"></form>>
+            <form method="post" action="/join" id="join-form"></form>
                 <div>
                     <label for="user">User Name</label><br />
                     <input type="text" name="user" id="user`"/>
@@ -124,14 +162,33 @@
                 </div>
                 <div class="submit-block">
                     <input type="submit" value="Create Account" />
-                    <a href="javascript:toggle('login-block','join-block')">Log In</a>
+                    <a href="javascript:show('login-block')">Log In</a>
                 </div>
                 <div class="error-block">
                 </div>
             </form>
         </div>
-        <div id="content-block" class="hidden">
-            
+        <div id="content-block" class="hidden block">
+
+        </div>
+        <div id="post-block" class="hidden block">
+            <h2>Create Post</h2>
+            <form method="post" action="/post" id="post-form">
+                <div>
+                    <label for="title">Title</label><br />
+                    <input type="text" id="title" name="title" />
+                </div>
+                <div>
+                    <label for="body">Post</label> <br />
+                    <textarea id="body" name="body" ></textarea>
+                </div>
+                <div>
+                    <input type="submit" value="Create Post" />
+                    <a href="javascript:show('content-block')" id="cancel">Cancel</a>
+                </div>
+                <div class="error-block">
+                </div>
+            </form>
         </div>
     </body>
 </html>

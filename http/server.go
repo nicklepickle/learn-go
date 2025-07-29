@@ -87,16 +87,14 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 func postHandler(res http.ResponseWriter, req *http.Request) {
 	auth := req.Header.Get("Authorization")
 	claims := jwt.MapClaims{}
-	_, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
 		return []byte(key), nil
 	})
 	if err != nil {
 		log.Println(err.Error())
 	} else {
 		//log.Println("token", token)
-		fmt.Println("user", claims["user"])
-		s := claims["id"].(string)
-		userId, err := strconv.Atoi(s)
+		userId := int(claims["id"].(float64)) //not sure why it's float64
 		if err != nil {
 			response := JsonResponse{
 				Errors: []string{"User id is invalid: " + err.Error()},
@@ -112,7 +110,9 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 
 		content := &Content{}
 
+		log.Println("user id = ", userId)
 		if id == "0" || id == "" {
+			log.Println("new content ")
 			content = &Content{
 				ContentId: 0,
 				UserId:    userId,
@@ -139,7 +139,7 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 						// does the content belong to this user?
 						if c.UserId != userId {
 							response := JsonResponse{
-								Errors: []string{err.Error()},
+								Errors: []string{"Unauthorized"},
 								Status: 500,
 							}
 							response.write(res)
@@ -155,13 +155,20 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		content, err = PostContent(content)
-		response := JsonResponse{
-			Data:   content,
-			Status: 200,
+		contents, err := PostContent(content)
+		if err != nil {
+			response := JsonResponse{
+				Errors: []string{err.Error()},
+				Status: 500,
+			}
+			response.write(res)
+		} else {
+			response := JsonResponse{
+				Data:   contents,
+				Status: 200,
+			}
+			response.write(res)
 		}
-		response.write(res)
-
 	}
 
 }

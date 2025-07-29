@@ -20,14 +20,16 @@ type Content struct {
 	Status    int
 }
 
-func PostContent(c *Content) (*Content, error) {
+func PostContent(c *Content) ([]Content, error) {
 	if c.ContentId == 0 {
 		c.ContentId = len(contents) + 1
+		contents = append(contents, *c)
+	} else {
+		contents[c.ContentId-1] = *c
 	}
-	contents[c.ContentId-1] = *c
 	err := writeContent()
 
-	return c, err
+	return contents, err
 }
 
 func GetContent(user int) []Content {
