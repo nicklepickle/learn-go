@@ -91,18 +91,16 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 		return []byte(key), nil
 	})
 	if err != nil {
-		log.Println(err.Error())
+		response := JsonResponse{
+			Errors: []string{"User id is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+		return
 	} else {
 		//log.Println("token", token)
 		userId := int(claims["id"].(float64)) //not sure why it's float64
-		if err != nil {
-			response := JsonResponse{
-				Errors: []string{"User id is invalid: " + err.Error()},
-				Status: 500,
-			}
-			response.write(res)
-			return
-		}
+
 		id := req.PostFormValue("id")
 		title := req.PostFormValue("title")
 		body := req.PostFormValue("body")
@@ -112,7 +110,7 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 
 		log.Println("user id = ", userId)
 		if id == "0" || id == "" {
-			log.Println("new content ")
+			// new content
 			content = &Content{
 				ContentId: 0,
 				UserId:    userId,
@@ -123,9 +121,9 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 				Updated:   time.Now(),
 				Status:    1,
 			}
-
 		} else {
-			userContent := GetContent(userId)
+			// edit content
+			userContent := GetUserContent(userId)
 			contentId, err := strconv.Atoi(id)
 			if err != nil {
 				response := JsonResponse{
@@ -150,6 +148,8 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 							content.Body = body
 							content.Updated = time.Now()
 						}
+
+						break
 					}
 				}
 			}
@@ -175,32 +175,56 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 
 func contentHandler(res http.ResponseWriter, req *http.Request) {
 	auth := req.Header.Get("Authorization")
+	id := req.PostFormValue("id")
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
 		return []byte(key), nil
 	})
+	log.Println("token", token)
+	userId := int(claims["id"].(float64)) //not sure why it's float64
+
 	if err != nil {
-		log.Println(err.Error())
-	} else {
-		log.Println("token", token)
-
-		userId := int(claims["id"].(float64)) //not sure why it's float64
-		log.Println("user id = ", userId)
-
+		response := JsonResponse{
+			Errors: []string{"User id is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+	} else if id != "" {
+		Id, err := strconv.Atoi(id)
 		if err != nil {
 			response := JsonResponse{
-				Errors: []string{"User id is invalid: " + err.Error()},
+				Errors: []string{"Content id is invalid: " + err.Error()},
 				Status: 500,
 			}
 			response.write(res)
+			return
 		} else {
-			userContent := GetContent(userId)
-			response := JsonResponse{
-				Data:   userContent,
-				Status: 200,
+			content := GetContent(Id)
+			if content.UserId == userId {
+				response := JsonResponse{
+					Data:   content,
+					Status: 200,
+				}
+				response.write(res)
+			} else {
+				response := JsonResponse{
+					Errors: []string{"Unauthorized"},
+					Status: 500,
+				}
+				response.write(res)
+				return
 			}
-			response.write(res)
 		}
+	} else {
+
+		//log.Println("user id = ", userId)
+		userContent := GetUserContent(userId)
+		response := JsonResponse{
+			Data:   userContent,
+			Status: 200,
+		}
+		response.write(res)
+
 	}
 
 }

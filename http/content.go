@@ -32,7 +32,14 @@ func PostContent(c *Content) ([]Content, error) {
 	return contents, err
 }
 
-func GetContent(user int) []Content {
+func GetContent(id int) Content {
+	if !loaded {
+		readContent()
+	}
+	return contents[id-1]
+}
+
+func GetUserContent(user int) []Content {
 	if !loaded {
 		readContent()
 	}
