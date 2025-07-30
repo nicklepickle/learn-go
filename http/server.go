@@ -13,7 +13,8 @@ import (
 )
 
 const port int = 8080
-const key string = "hB2sPfLoqJKIRGE_WF8OERaZBchR1S1urvKCWUEMGQ7"
+const jwtKey string = "hB2sPfLoqJKIRGE_WF8OERaZBchR1S1urvKCWUEMGQ7"
+const expHrs time.Duration = (12 * time.Hour)
 
 type JsonResponse struct {
 	Status int
@@ -42,24 +43,38 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 		}
 		response.write(res)
 	} else {
+		expiry := time.Now().Add(expHrs)
+
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"id":   user.UserId,
-			"user": user.UserName,
+			"UserId":   user.UserId,
+			"UserName": user.UserName,
+			"RegisteredClaims": jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(expiry),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+			},
 		})
 
-		signedToken, err := token.SignedString([]byte(key))
+		signedToken, err := token.SignedString([]byte(jwtKey))
 		if err != nil {
 			log.Println(err.Error())
 		}
 
 		cookie := http.Cookie{
-			Name:  "_jwt",
-			Value: signedToken,
+			Name:    "_jwt",
+			Value:   signedToken,
+			Expires: expiry,
 		}
 		http.SetCookie(res, &cookie)
 
+		var auth = AuthResponse{
+			UserId:   user.UserId,
+			UserName: user.UserName,
+			Expires:  expiry,
+		}
+
 		response := JsonResponse{
-			Data:   signedToken,
+			Data:   auth,
 			Status: 200,
 		}
 		response.write(res)
@@ -76,8 +91,37 @@ func joinHandler(res http.ResponseWriter, req *http.Request) {
 		}
 		response.write(res)
 	} else {
+		expiry := time.Now().Add(expHrs)
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"UserId":   user.UserId,
+			"UserName": user.UserName,
+			"RegisteredClaims": jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(expiry),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+			},
+		})
+
+		signedToken, err := token.SignedString([]byte(jwtKey))
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		cookie := http.Cookie{
+			Name:    "_jwt",
+			Value:   signedToken,
+			Expires: expiry,
+		}
+		http.SetCookie(res, &cookie)
+		var auth = AuthResponse{
+			UserId:   user.UserId,
+			UserName: user.UserName,
+			Expires:  expiry,
+		}
+
 		response := JsonResponse{
-			Data:   user,
+			Data:   auth,
 			Status: 200,
 		}
 		response.write(res)
@@ -88,7 +132,7 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 	auth := req.Header.Get("Authorization")
 	claims := jwt.MapClaims{}
 	_, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
-		return []byte(key), nil
+		return []byte(jwtKey), nil
 	})
 	if err != nil {
 		response := JsonResponse{
@@ -99,7 +143,7 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		//log.Println("token", token)
-		userId := int(claims["id"].(float64)) //not sure why it's float64
+		userId := int(claims["UserId"].(float64)) //not sure why it's float64
 
 		id := req.PostFormValue("id")
 		title := req.PostFormValue("title")
@@ -114,7 +158,7 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 			content = &Content{
 				ContentId: 0,
 				UserId:    userId,
-				UserName:  claims["user"].(string),
+				UserName:  claims["UserName"].(string),
 				Title:     title,
 				Body:      body,
 				Created:   time.Now(),
@@ -174,14 +218,17 @@ func postHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func contentHandler(res http.ResponseWriter, req *http.Request) {
-	auth := req.Header.Get("Authorization")
 	id := req.PostFormValue("id")
+	auth := req.Header.Get("Authorization")
+
+	log.Println("content id", id)
+
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
-		return []byte(key), nil
+		return []byte(jwtKey), nil
 	})
 	log.Println("token", token)
-	userId := int(claims["id"].(float64)) //not sure why it's float64
+	userId := int(claims["UserId"].(float64)) //not sure why it's float64
 
 	if err != nil {
 		response := JsonResponse{
@@ -200,19 +247,21 @@ func contentHandler(res http.ResponseWriter, req *http.Request) {
 			return
 		} else {
 			content := GetContent(Id)
-			if content.UserId == userId {
-				response := JsonResponse{
-					Data:   content,
-					Status: 200,
-				}
-				response.write(res)
-			} else {
+			if content.UserId != userId {
 				response := JsonResponse{
 					Errors: []string{"Unauthorized"},
 					Status: 500,
 				}
 				response.write(res)
 				return
+			} else {
+				// happy path
+				content.Access = true
+				response := JsonResponse{
+					Data:   content,
+					Status: 200,
+				}
+				response.write(res)
 			}
 		}
 	} else {

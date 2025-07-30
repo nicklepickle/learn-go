@@ -39,7 +39,6 @@ function handleAuth(e) {
 
 }
 
-
 function handleAuthResponse(form, json) {
     if (json.Errors != null) {
         const e = getErrorBlock(form)
@@ -52,7 +51,7 @@ function handleAuthResponse(form, json) {
         e.append(ul);
     }
     else {
-        console.log('load content');
+        console.log(json);
         loadContent();
     }
 }
@@ -80,8 +79,9 @@ function handleContentResponse(json) {
         `<div class="post">
             <h2>${c.Title}</h2>
             <div>${c.Body}</div>
-            <div><i>${c.UserName} ${new Date(c.Created).toDateString()}</i></div>
-        </div>`; 
+            <div><i>${c.UserName} ${new Date(c.Created).toDateString()}</i> ${c.Access}</div>` +
+            (c.Access ? `<div><a href="javascript:editPost(${c.ContentId})">Edit</a></div>` : '') +
+        '</div>'; 
     }
 
     show('content-block');
@@ -89,20 +89,31 @@ function handleContentResponse(json) {
 
 function createPost() {
     document.getElementById('id').value = '0'
-    document.getElementById('post-h2').value = 'Create Post'
+    document.getElementById('submit-post').value = 'Create Post'
+    document.getElementById('post-h2').innerText = 'Create Post'
     document.getElementById('title').value = ''
     document.getElementById('body').value = ''
     show('post-block')
 }
 
 function editPost(id) {
-    fetch('/content',{method:'post',body: {id:id}})
+    console.log('editPost',id)
+    let jwt = Cookie.getCookie('_jwt');
+    let params = new URLSearchParams();
+    params.append("id",id.toString())
+    fetch('/content',{
+            method:'post',
+            body: params,
+            headers: {
+                'Authorization': 'Bearer ' + jwt 
+            }})
         .then(response => response.json())
         .then(json => {
             document.getElementById('id').value = id
-            document.getElementById('post-h2').value = 'Create Post'
-            document.getElementById('title').value = json.Title
-            document.getElementById('body').value = json.Body
+            document.getElementById('submit-post').value = 'Edit Post'
+            document.getElementById('post-h2').innerText = 'Edit Post'
+            document.getElementById('title').value = json.Data.Title
+            document.getElementById('body').value = json.Data.Body
             show('post-block')
         })
         .catch(error => console.error(error));

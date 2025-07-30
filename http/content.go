@@ -18,6 +18,7 @@ type Content struct {
 	Created   time.Time
 	Updated   time.Time
 	Status    int
+	Access    bool
 }
 
 func PostContent(c *Content) ([]Content, error) {
@@ -29,7 +30,7 @@ func PostContent(c *Content) ([]Content, error) {
 	}
 	err := writeContent()
 
-	return contents, err
+	return GetUserContent(c.UserId), err
 }
 
 func GetContent(id int) Content {
@@ -45,6 +46,7 @@ func GetUserContent(user int) []Content {
 	}
 	userContent := []Content{}
 	for _, c := range contents {
+		c.Access = (c.UserId == user)
 		if c.UserId == user || c.Status == 2 { // 2 = public
 			userContent = append(userContent, c)
 		}

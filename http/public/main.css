@@ -17,14 +17,14 @@ input[type=text], input[type=password], input[type=submit] {
     font-size: 16px;
 }
 
-i {
-    font-size:12px;
-}
-
 textarea {
     width: 405px;
     height: 405px;
     font-size: 16px;
+}
+
+i {
+    font-size:12px;
 }
 
 /* classes */

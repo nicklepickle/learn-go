@@ -28,6 +28,12 @@ type User struct {
 	Status   int
 }
 
+type AuthResponse struct {
+	UserId   int
+	UserName string
+	Expires  time.Time
+}
+
 func (u *User) save() error {
 	Users[u.UserName] = *u
 	err := writeUsers()
