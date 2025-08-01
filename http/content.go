@@ -17,7 +17,7 @@ type Content struct {
 	Body      string
 	Created   time.Time
 	Updated   time.Time
-	Status    int
+	Status    int // 2 = published, 1 = draft  0 = deleted
 	Access    bool
 }
 
@@ -47,7 +47,7 @@ func GetUserContent(user int) []Content {
 	userContent := []Content{}
 	for _, c := range contents {
 		c.Access = (c.UserId == user)
-		if c.UserId == user || c.Status == 2 { // 2 = public
+		if (c.UserId == user && c.Status == 1) || c.Status == 2 {
 			userContent = append(userContent, c)
 		}
 	}

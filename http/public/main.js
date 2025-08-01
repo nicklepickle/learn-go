@@ -77,9 +77,9 @@ function handleContentResponse(json) {
     for (const c of json.Data) {
         $content.innerHTML += 
         `<div class="post">
-            <h2>${c.Title}</h2>
+            <h2>${c.Title} <i>${c.Status == "1" ? "DRAFT" : ""}</i></h2>
             <div>${c.Body}</div>
-            <div><i>${c.UserName} ${new Date(c.Created).toDateString()}</i> ${c.Access}</div>` +
+            <div><i>${c.UserName} ${new Date(c.Created).toDateString()}</i></div>` +
             (c.Access ? `<div><a href="javascript:editPost(${c.ContentId})">Edit</a></div>` : '') +
         '</div>'; 
     }
@@ -93,6 +93,7 @@ function createPost() {
     document.getElementById('post-h2').innerText = 'Create Post'
     document.getElementById('title').value = ''
     document.getElementById('body').value = ''
+    document.getElementById('pub-actions').value = ''
     show('post-block')
 }
 
@@ -114,6 +115,14 @@ function editPost(id) {
             document.getElementById('post-h2').innerText = 'Edit Post'
             document.getElementById('title').value = json.Data.Title
             document.getElementById('body').value = json.Data.Body
+            if (json.Data.Status == "1") {
+                document.getElementById('pub-actions').innerHTML = 
+                `<a href="/publish?id=${id}&status=2">Publish</a> <a href="/publish?id=${id}&status=0" class="content-action">Delete</a>`;
+            }
+            else {
+                document.getElementById('pub-actions').innerHTML = 
+                `<a href="/publish?id=${id}&status=1">Unpublish</a> <a href="/publish?id=${id}&status=0" class="content-action">Delete</a>`;
+            }
             show('post-block')
         })
         .catch(error => console.error(error));

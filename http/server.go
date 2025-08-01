@@ -221,7 +221,7 @@ func contentHandler(res http.ResponseWriter, req *http.Request) {
 	id := req.PostFormValue("id")
 	auth := req.Header.Get("Authorization")
 
-	log.Println("content id", id)
+	//log.Println("content id", id)
 
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(strings.Replace(auth, "Bearer ", "", 1), claims, func(token *jwt.Token) (any, error) {
@@ -278,12 +278,92 @@ func contentHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
+func publishHandler(res http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+
+	id := query["id"]
+	status := query["status"]
+	//auth := req.Header.Get("Authorization")
+	auth, err := req.Cookie("_jwt")
+	if err != nil {
+		response := JsonResponse{
+			Errors: []string{"Cookie is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+		return
+
+	}
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(auth.Value, claims, func(token *jwt.Token) (any, error) {
+		return []byte(jwtKey), nil
+	})
+
+	if err != nil {
+		response := JsonResponse{
+			Errors: []string{"User id is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+		return
+
+	}
+
+	//log.Println("token", token)
+	_ = token
+	userId := int(claims["UserId"].(float64)) //not sure why it's float64
+
+	Id, err := strconv.Atoi(id[0])
+	Status, err := strconv.Atoi(status[0])
+	if err != nil {
+		response := JsonResponse{
+			Errors: []string{"Content id is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+		return
+	}
+	content := GetContent(Id)
+
+	if content.UserId != userId {
+		response := JsonResponse{
+			Errors: []string{"Unauthorized"},
+			Status: 500,
+		}
+		response.write(res)
+		return
+	}
+
+	// happy path
+	content.Status = Status
+	_, err = PostContent(&content)
+	if err != nil {
+		response := JsonResponse{
+			Errors: []string{err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+	} else {
+		/*
+			response := JsonResponse{
+				Data:   contents,
+				Status: 200,
+			}
+			response.write(res) */
+		log.Println("REDIRECT to /")
+		http.Redirect(res, req, "/", http.StatusFound)
+	}
+
+}
+
 func main() {
 	fs := http.FileServer(http.Dir("./public"))
 	http.Handle("/", fs)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/join", joinHandler)
 	http.HandleFunc("/content", contentHandler)
+	http.HandleFunc("/publish", publishHandler)
 	http.HandleFunc("/post", postHandler)
 
 	fmt.Printf("listening on http://localhost:%d/\n", port)
