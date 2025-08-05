@@ -77,6 +77,16 @@ func main() {
 		fmt.Println("n1=", strconv.Itoa(n1), "n2=", strconv.Itoa(n2))
 		n1, n2 = InPlace(n1, n2)
 		fmt.Println("n1=", strconv.Itoa(n1), "n2=", strconv.Itoa(n2))
+		bytes := []byte("SETYB NO ROX")
+		fmt.Println(string(bytes), len(bytes))
+		for j := 0; j < len(bytes)/2; j++ {
+			bytes[j] = bytes[j] ^ bytes[len(bytes)-j-1]
+			bytes[len(bytes)-j-1] = bytes[len(bytes)-j-1] ^ bytes[j]
+			bytes[j] = bytes[j] ^ bytes[len(bytes)-j-1]
+
+			fmt.Println(string(bytes), len(bytes))
+		}
+
 	case "months":
 		now := time.Now()
 		// use _ to ignore the index
