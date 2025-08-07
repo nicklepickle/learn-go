@@ -315,6 +315,14 @@ func publishHandler(res http.ResponseWriter, req *http.Request) {
 	userId := int(claims["UserId"].(float64)) //not sure why it's float64
 
 	Id, err := strconv.Atoi(id[0])
+	if err != nil {
+		response := JsonResponse{
+			Errors: []string{"Content id is invalid: " + err.Error()},
+			Status: 500,
+		}
+		response.write(res)
+		return
+	}
 	Status, err := strconv.Atoi(status[0])
 	if err != nil {
 		response := JsonResponse{
