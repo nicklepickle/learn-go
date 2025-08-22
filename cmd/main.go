@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"log"
@@ -60,6 +61,11 @@ func Minus(n1 int, n2 int) int {
 }
 
 func main() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	// args are passed in os.Args
 	fmt.Println(len(os.Args), os.Args)
 	// command is the last arg
@@ -114,30 +120,44 @@ func main() {
 			break
 		}
 		fmt.Println(marshalled)
-		path, err := os.Getwd()
-		if err != nil {
-			fmt.Println(err.Error())
-			break
-		}
-		err = os.WriteFile(path+"/colors.json", []byte(marshalled), 0777)
+		err = os.WriteFile(cwd+"/colors.json", []byte(marshalled), 0777)
 		if err != nil {
 			fmt.Println(err.Error())
 			break
 		}
 
-		bytes, err := os.ReadFile(path + "/colors.json")
+		jsonBytes, err := os.ReadFile(cwd + "/colors.json")
 		if err != nil {
 			fmt.Println(err.Error())
 			break
 		}
 		colors := []Color{}
-		json.Unmarshal(bytes, &colors)
+		json.Unmarshal(jsonBytes, &colors)
 		for _, c := range colors {
 			fmt.Println(c.Name)
 		}
-
 	case "xml":
-		fmt.Println(GetColors("xml"))
+		marshalled, err := GetColors("xml")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		fmt.Println(marshalled)
+		err = os.WriteFile(cwd+"/colors.xml", []byte(marshalled), 0777)
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		xmlBytes, err := os.ReadFile(cwd + "/colors.xml")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		root := Root{}
+		xml.Unmarshal(xmlBytes, &root)
+		for _, c := range root.Colors {
+			fmt.Println(c.Name)
+		}
 	case "csv":
 		fmt.Println(GetColors("csv"))
 	default:

@@ -17,6 +17,10 @@ func (c *Color) ToArray() []string {
 	return []string{c.Name, c.Hash}
 }
 
+type Root struct {
+	Colors []Color
+}
+
 var Colors = []Color{
 	{"Red", "#FF0000"},
 	{"White", "#FFFFFF"},
@@ -48,7 +52,9 @@ func GetColors(encoding string) (string, error) {
 		}
 		return string(bytes), nil
 	} else if encoding == "xml" {
-		bytes, err := xml.Marshal(Colors)
+		root := Root{}
+		root.Colors = Colors
+		bytes, err := xml.Marshal(root)
 		if err != nil {
 			return "", err
 		}
