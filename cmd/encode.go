@@ -17,6 +17,7 @@ func (c *Color) ToArray() []string {
 	return []string{c.Name, c.Hash}
 }
 
+// need a root element for xml encoding
 type Root struct {
 	Colors []Color
 }
@@ -45,13 +46,14 @@ var Colors = []Color{
 }
 
 func GetColors(encoding string) (string, error) {
-	if encoding == "json" {
+	switch encoding {
+	case "json":
 		bytes, err := json.Marshal(Colors)
 		if err != nil {
 			return "", err
 		}
 		return string(bytes), nil
-	} else if encoding == "xml" {
+	case "xml":
 		root := Root{}
 		root.Colors = Colors
 		bytes, err := xml.Marshal(root)
@@ -59,7 +61,7 @@ func GetColors(encoding string) (string, error) {
 			return "", err
 		}
 		return string(bytes), nil
-	} else if encoding == "csv" {
+	case "csv":
 		buf := new(bytes.Buffer)
 		writer := csv.NewWriter(buf)
 		// header

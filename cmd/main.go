@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -92,7 +93,24 @@ func main() {
 
 			fmt.Println(string(bytes), len(bytes))
 		}
-
+	case "async":
+		waitgroup := sync.WaitGroup{}
+		waitgroup.Add(4)
+		now := time.Now()
+		mu := sync.Mutex{}
+		var log string = "started " + now.String()
+		for i := 2; i < 10; i += 2 {
+			go func() {
+				var exp time.Duration = (time.Duration(i) * time.Second)
+				defer waitgroup.Done()
+				time.Sleep(exp)
+				mu.Lock()
+				log += "\n" + strconv.Itoa(i) + " seconds elapsed"
+				mu.Unlock()
+			}()
+		}
+		waitgroup.Wait()
+		fmt.Println(log)
 	case "months":
 		now := time.Now()
 		// use _ to ignore the index
