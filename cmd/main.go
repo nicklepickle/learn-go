@@ -4,6 +4,7 @@ package main
 // https://go.dev/ref/spec
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -177,7 +178,45 @@ func main() {
 			fmt.Println(c.Name)
 		}
 	case "csv":
-		fmt.Println(GetColors("csv"))
+		marshalled, err := GetColors("csv")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+		fmt.Println(marshalled)
+		err = os.WriteFile(cwd+"/colors.csv", []byte(marshalled), 0777)
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+
+		file, err := os.Open(cwd + "/colors.csv")
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+
+		reader := csv.NewReader(file)
+		records, err := reader.ReadAll()
+		if err != nil {
+			fmt.Println(err.Error())
+			break
+		}
+
+		i := 0
+		colors := []Color{}
+		for _, r := range records {
+			if i > 0 {
+				color := Color{Name: r[0], Hash: r[1]}
+				colors = append(colors, color)
+			}
+			i++
+		}
+
+		for _, c := range colors {
+			fmt.Println(c.Name)
+		}
+
 	default:
 		fmt.Println("Command not recognized")
 	}
